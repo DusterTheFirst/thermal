@@ -1,5 +1,7 @@
 {
     "cSpell.words": [
-        "XOFF"
+        "XOFF",
+        "escpos",
+        "libusb"
     ]
 }

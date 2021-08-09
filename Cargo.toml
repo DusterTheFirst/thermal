@@ -7,4 +7,9 @@ edition = "2018"
 
 [dependencies]
 color-eyre = "0.5.11"
+escpos-rs = "0.2.1"   # { git = "https://github.com/Malanche/escpos-rs" }
 indoc = "1.0.3"
+libusb = "0.3.0"
+
+[patch.crates-io]
+escpos-rs = { git = "https://github.com/DusterTheFirst/escpos-rs", branch = "generic-table-2" }
