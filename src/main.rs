@@ -46,7 +46,7 @@ fn main() -> color_eyre::Result<()> {
         ),
     )?;
 
-    barcode_UPC_A(&printer, b"01234567890")?;
+    barcode_upc_a(&printer, b"69420000000")?;
 
     printer.raw([0x1D, 0x54, 0x01])?; // GS T (Print data in the current print buffer)
 
@@ -81,7 +81,7 @@ fn main() -> color_eyre::Result<()> {
     Ok(())
 }
 
-fn barcode_UPC_A(printer: &Printer, data: &[u8; 11]) -> Result<(), escpos_rs::Error> {
+fn barcode_upc_a(printer: &Printer, data: &[u8; 11]) -> Result<(), escpos_rs::Error> {
     for (i, &c) in data.iter().enumerate() {
         match c {
             b'0'..=b'9' => {}
@@ -96,8 +96,7 @@ fn barcode_UPC_A(printer: &Printer, data: &[u8; 11]) -> Result<(), escpos_rs::Er
     // Set print position to the beginning of print line
     printer.raw([0x1D, 0x54, 0x01])?; // GS T (Print data in the current print buffer)
 
-    // Select justification
-    printer.raw([0x1B, 0x61, 0x1])?; // ESC a CENTERED
+    printer.justify(Justification::Center)?;
 
     // Select print position of HRI characters
     printer.raw([0x1D, 0x48, 0x02])?; // GS H (Below the bar code)
@@ -108,8 +107,25 @@ fn barcode_UPC_A(printer: &Printer, data: &[u8; 11]) -> Result<(), escpos_rs::Er
     // Bar code data
     printer.raw(data)?; // d1 ... dn
 
-    // Select justification
-    printer.raw([0x1B, 0x61, 0x0])?; // ESC a LEFT
+    printer.justify(Justification::Left)?;
 
     Ok(())
+}
+
+enum Justification {
+    Left = 0x00,
+    Center = 0x01,
+    Right = 0x02,
+}
+
+trait PrinterExt {
+    const ESC: u8 = 0x1B;
+
+    fn justify(&self, justification: Justification) -> Result<(), escpos_rs::Error>;
+}
+
+impl PrinterExt for Printer<'_> {
+    fn justify(&self, justification: Justification) -> Result<(), escpos_rs::Error> {
+        self.raw([Self::ESC, b'a', justification as u8])
+    }
 }
