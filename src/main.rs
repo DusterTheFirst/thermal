@@ -46,7 +46,9 @@ fn main() -> color_eyre::Result<()> {
         ),
     )?;
 
-    code93_barcode(&printer, b"Hello World!")?;
+    barcode_UPC_A(&printer, b"01234567890")?;
+
+    printer.raw([0x1D, 0x54, 0x01])?; // GS T (Print data in the current print buffer)
 
     printer.cut()?;
 
@@ -79,17 +81,35 @@ fn main() -> color_eyre::Result<()> {
     Ok(())
 }
 
-fn code93_barcode(printer: &Printer, data: &[u8]) -> Result<(), escpos_rs::Error> {
-    assert!(data.len() >= 1, "Data must have at least one item");
-    assert!(data.len() <= 255, "Data cannot have more than 255 items");
+fn barcode_UPC_A(printer: &Printer, data: &[u8; 11]) -> Result<(), escpos_rs::Error> {
+    for (i, &c) in data.iter().enumerate() {
+        match c {
+            b'0'..=b'9' => {}
+            _ => panic!(
+                "Invalid data '{}' at position {}. Must be one of: 0~9",
+                char::from_u32(c as u32).unwrap_or('?'),
+                i
+            ),
+        }
+    }
 
-    assert!(data.iter().all(|c| matches!(c, 0x00..=0x7F)));
+    // Set print position to the beginning of print line
+    printer.raw([0x1D, 0x54, 0x01])?; // GS T (Print data in the current print buffer)
 
-    printer.raw([0x1D, 0x54, 0x01])?; // GS T
+    // Select justification
+    printer.raw([0x1B, 0x61, 0x1])?; // ESC a CENTERED
 
-    printer.raw([0x1D, 0x6B, 0x48, data.len() as u8])?; // GS k
+    // Select print position of HRI characters
+    printer.raw([0x1D, 0x48, 0x02])?; // GS H (Below the bar code)
 
-    printer.raw(data)?;
+    // Print bar code
+    printer.raw([0x1D, 0x6B, 65, data.len() as u8])?; // GS k UPC-A (B) n
+
+    // Bar code data
+    printer.raw(data)?; // d1 ... dn
+
+    // Select justification
+    printer.raw([0x1B, 0x61, 0x0])?; // ESC a LEFT
 
     Ok(())
 }
