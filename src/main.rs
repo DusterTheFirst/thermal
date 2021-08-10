@@ -2,7 +2,7 @@ use color_eyre::eyre::{ContextCompat, WrapErr};
 use escpos_rs::{command::Font, Instruction, PrintData, Printer, PrinterProfile};
 use indoc::indoc;
 use libusb::Context;
-use std::{env, fmt::format, time::Duration};
+use std::{env, fmt::format, thread::sleep, time::Duration};
 
 fn main() -> color_eyre::Result<()> {
     env::set_var("RUST_BACKTRACE", "full");
@@ -46,6 +46,8 @@ fn main() -> color_eyre::Result<()> {
         ),
     )?;
 
+    code93_barcode(&printer, b"Hello World!")?;
+
     printer.cut()?;
 
     enum PaperType {
@@ -54,15 +56,16 @@ fn main() -> color_eyre::Result<()> {
         Validation = 0b1000,
     }
 
-    printer.raw([0x1B, 0x63, 0x30, PaperType::Slip as u8])?; // ESC c 0
+    // printer.raw([0x1B, 0x63, 0x30, PaperType::Slip as u8])?; // ESC c 0
 
-    printer.println(indoc! {"
-        123456789012345678901234567890123456789012345
-        ---------------------------------------------
-    "})?;
-    for (var, val) in env::vars() {
-        printer.println(format!("{} = {}", var, val))?;
-    }
+    // printer.println(indoc! {"
+    //     123456789012345678901234567890123456789012345
+    //     ---------------------------------------------
+    // "})?;
+    // for (var, val) in env::vars().take(10) {
+    //     printer.println(format!("{} = {}", var, val))?;
+    //     sleep(Duration::from_secs(1));
+    // }
 
     // printer.println("Hello")?;
 
@@ -72,6 +75,21 @@ fn main() -> color_eyre::Result<()> {
     // printer.println("World")?;
 
     printer.raw([0x1B, 0x63, 0x30, PaperType::Roll as u8])?;
+
+    Ok(())
+}
+
+fn code93_barcode(printer: &Printer, data: &[u8]) -> Result<(), escpos_rs::Error> {
+    assert!(data.len() >= 1, "Data must have at least one item");
+    assert!(data.len() <= 255, "Data cannot have more than 255 items");
+
+    assert!(data.iter().all(|c| matches!(c, 0x00..=0x7F)));
+
+    printer.raw([0x1D, 0x54, 0x01])?; // GS T
+
+    printer.raw([0x1D, 0x6B, 0x48, data.len() as u8])?; // GS k
+
+    printer.raw(data)?;
 
     Ok(())
 }
