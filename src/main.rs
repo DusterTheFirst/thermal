@@ -1,7 +1,7 @@
-use std::env;
+use std::{env, thread::sleep, time::Duration};
 
 use color_eyre::eyre::WrapErr;
-use thermal::{Justification, PaperType, Printer};
+use thermal::{Justification, PaperType, Printer, SlipSide};
 
 fn main() -> color_eyre::Result<()> {
     env::set_var("RUST_BACKTRACE", "full");
@@ -62,7 +62,8 @@ fn main() -> color_eyre::Result<()> {
     printer.cut()?;
 
     // printer.raw([0x1B, 0x53])?; // Select Standard mode: ESC S
-    printer.paper_type(PaperType::Slip)?;
+    // printer.paper_type(PaperType::Slip)?;
+    // printer.slip_side(SlipSide::Face)?;
     // printer.raw([0x1B, 0x63, 0x31, 1 >> 6])?; // ESC c 1
 
     // printer.justify(Justification::Center)?;
@@ -74,17 +75,19 @@ fn main() -> color_eyre::Result<()> {
     //     123456789012345678901234567890123456789012345
     //     ---------------------------------------------
     // "})?;
-    // for (var, val) in env::vars().take(10) {
-    //     printer.println(format!("{} = {}", var, val))?;
-    //     sleep(Duration::from_secs(1));
-    // }
+    for (var, val) in env::vars().take(10) {
+        printer.println(format!("{} = {}", var, val))?;
+        // sleep(Duration::from_secs(1));
+    }
 
-    printer.println("Hello")?;
+    // printer.println("Hello")?;
+
+    // printer.slip_side(SlipSide::Back)?;
 
     // printer.raw([0x1B, 0x63, 0x31, PaperType::Validation as u8])?; // ESC c 1
     // printer.raw([0x1B, 0x63, 0x30, PaperType::Validation as u8])?;
 
-    printer.println("World")?;
+    // printer.println("World")?;
 
     printer.paper_type(PaperType::Roll)?;
 
