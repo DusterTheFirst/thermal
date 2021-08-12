@@ -1,4 +1,4 @@
-use std::{env, thread::sleep, time::Duration};
+use std::env;
 
 use color_eyre::eyre::WrapErr;
 use thermal::{Justification, PaperType, Printer, SlipSide};
@@ -84,7 +84,6 @@ fn main() -> color_eyre::Result<()> {
 
     printer.println("Hello")?;
     printer.println("World")?;
-
 
     Ok(())
 }
