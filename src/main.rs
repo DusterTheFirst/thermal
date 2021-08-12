@@ -62,8 +62,8 @@ fn main() -> color_eyre::Result<()> {
     printer.cut()?;
 
     // printer.raw([0x1B, 0x53])?; // Select Standard mode: ESC S
-    // printer.paper_type(PaperType::Slip)?;
-    // printer.slip_side(SlipSide::Face)?;
+    printer.paper_type(PaperType::Slip)?;
+    printer.slip_side(SlipSide::Face)?;
     // printer.raw([0x1B, 0x63, 0x31, 1 >> 6])?; // ESC c 1
 
     // printer.justify(Justification::Center)?;
@@ -80,16 +80,11 @@ fn main() -> color_eyre::Result<()> {
         // sleep(Duration::from_secs(1));
     }
 
-    // printer.println("Hello")?;
+    printer.slip_side(SlipSide::Back)?;
 
-    // printer.slip_side(SlipSide::Back)?;
+    printer.println("Hello")?;
+    printer.println("World")?;
 
-    // printer.raw([0x1B, 0x63, 0x31, PaperType::Validation as u8])?; // ESC c 1
-    // printer.raw([0x1B, 0x63, 0x30, PaperType::Validation as u8])?;
-
-    // printer.println("World")?;
-
-    printer.paper_type(PaperType::Roll)?;
 
     Ok(())
 }
