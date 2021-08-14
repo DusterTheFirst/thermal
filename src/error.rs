@@ -1,12 +1,20 @@
-use std::{fmt::Debug, io, ops::RangeInclusive};
+use std::{fmt::Debug, ops::RangeInclusive};
 
 use codepage_437::Cp437Error;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+pub enum ConnectionError {
+    #[error("libusb error: {0}")]
+    USB(#[from] rusb::Error),
+    #[error("no bulk endpoint could be found")]
+    NoBulkEndpoint,
+}
+
+#[derive(Error, Debug)]
 pub enum PrinterError {
     #[error("failed to write to printer: {0}")]
-    IO(#[from] io::Error),
+    USB(#[from] rusb::Error),
 }
 
 #[derive(Error, Debug)]

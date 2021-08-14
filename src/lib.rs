@@ -1,13 +1,9 @@
-use std::{
-    cell::RefCell,
-    fmt::Debug,
-    fs::{File, OpenOptions},
-    io::{self, Write},
-    path::Path,
-};
+use std::{fmt::Debug, time::Duration};
 
 use codepage_437::{ToCp437, CP437_CONTROL};
-use error::{BarcodeError, PrinterError, TextError};
+use error::{BarcodeError, ConnectionError, PrinterError, TextError};
+use rusb::{Context, DeviceHandle, Direction, TransferType, UsbContext};
+use tracing::warn;
 
 mod error;
 
@@ -34,29 +30,86 @@ pub enum SlipSide {
     Back = 0x44,
 }
 
-pub struct PrinterBuilder {}
+pub struct PrinterBuilder {
+    vendor_id: u16,
+    product_id: u16,
+    timeout: Duration,
+}
 
 impl PrinterBuilder {
-    /// Finalize the builder and connect to the printer at the given path
-    pub fn connect<P: AsRef<Path>>(self, path: P) -> io::Result<Printer> {
-        let device = OpenOptions::new()
-            .append(true)
-            .read(true)
-            .open(path)
-            .map(RefCell::new)?;
+    pub fn timeout(mut self, timeout: Duration) -> Self {
+        self.timeout = timeout;
+        self
+    }
 
-        Ok(Printer { device })
+    /// Finalize the builder and connect to the printer at the given path
+    pub fn connect(self, context: &Context) -> Result<Option<Printer>, ConnectionError> {
+        let devices = context.devices()?;
+
+        for device in devices.iter() {
+            let dd = device.device_descriptor()?;
+
+            if dd.vendor_id() != self.vendor_id || dd.product_id() != self.product_id {
+                continue;
+            }
+
+            let config_descriptor = device.active_config_descriptor()?;
+
+            let mut detected_endpoint = None;
+
+            // TODO: ew
+            'epl: for interface in config_descriptor.interfaces() {
+                for descriptor in interface.descriptors() {
+                    for endpoint in descriptor.endpoint_descriptors() {
+                        if endpoint.transfer_type() == TransferType::Bulk
+                            && endpoint.direction() == Direction::Out
+                        {
+                            detected_endpoint = Some(endpoint.number());
+                            break 'epl;
+                        }
+                    }
+                }
+            }
+
+            let endpoint = detected_endpoint.ok_or(ConnectionError::NoBulkEndpoint)?;
+
+            let mut handle = device.open()?;
+
+            if let Ok(active) = handle.kernel_driver_active(0) {
+                if active {
+                    handle.detach_kernel_driver(0)?;
+                }
+            } else {
+                warn!("Unable to detect kernel driver. This may cause issues later");
+            }
+
+            handle.claim_interface(0)?;
+
+            return Ok(Some(Printer {
+                endpoint,
+                handle,
+                timeout: self.timeout,
+            }));
+        }
+
+        Ok(None)
     }
 }
 
 pub struct Printer {
-    device: RefCell<File>,
+    endpoint: u8,
+    handle: DeviceHandle<Context>,
+    timeout: Duration,
 }
 
 impl Printer {
     /// Create a printer builder to configure printer settings
-    pub fn builder() -> PrinterBuilder {
-        PrinterBuilder {}
+    pub fn builder(vendor_id: u16, product_id: u16) -> PrinterBuilder {
+        PrinterBuilder {
+            vendor_id,
+            product_id,
+            timeout: Duration::from_secs(10),
+        }
     }
 }
 
@@ -67,7 +120,8 @@ impl Printer {
 
     /// Write raw bytes to the printer
     fn raw<D: AsRef<[u8]>>(&self, data: D) -> Result<(), PrinterError> {
-        self.device.borrow_mut().write_all(data.as_ref())?;
+        self.handle
+            .write_bulk(self.endpoint, data.as_ref(), self.timeout)?;
 
         Ok(())
     }

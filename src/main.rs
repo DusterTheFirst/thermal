@@ -1,13 +1,25 @@
 use std::env;
 
-use color_eyre::eyre::WrapErr;
+use color_eyre::eyre::{ContextCompat, WrapErr};
+use rusb::Context;
 use thermal::{Justification, PaperType, Printer, SlipSide};
+use tracing::info;
+use tracing_subscriber::EnvFilter;
 
 fn main() -> color_eyre::Result<()> {
-    env::set_var("RUST_BACKTRACE", "full");
+    if env::var("RUST_LIB_BACKTRACE").is_err() {
+        env::set_var("RUST_LIB_BACKTRACE", "1");
+    }
     color_eyre::install()?;
 
-    // let context = Context::new().wrap_err("Failed to get libusb context")?;
+    if env::var("RUST_LOG").is_err() {
+        env::set_var("RUST_LOG", "info");
+    }
+    tracing_subscriber::fmt::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
+
+    let context = Context::new().wrap_err("Failed to get libusb context")?;
 
     // let printer_details = PrinterProfile::builder(0x1a86, 0x7584)
     //     // .with_width((180.0 * 2.83) as u16)
@@ -17,9 +29,13 @@ fn main() -> color_eyre::Result<()> {
 
     // let printer = Printer::with_context(&context, printer_details)?.wrap_err("No printer found")?;
 
-    let printer = Printer::builder()
-        .connect("/dev/usb/lp4")
-        .wrap_err("Failed to connect to the printer")?;
+    let printer = Printer::builder(0x1a86, 0x7584)
+        .connect(&context)
+        .wrap_err("Failed to connect to the printer")?
+        .wrap_err("No printer found")?;
+
+    info!("Connected!"); // TODO: more logging
+    // TODO: UI
 
     printer.init()?;
 
