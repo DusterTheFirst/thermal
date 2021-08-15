@@ -3,12 +3,15 @@ use std::{fmt::Debug, time::Duration};
 use codepage_437::{ToCp437, CP437_CONTROL};
 use error::{BarcodeError, ConnectionError, PrinterError, TextError};
 use rusb::{Context, DeviceHandle, Direction, TransferType, UsbContext};
-use tracing::warn;
+use tracing::{instrument, warn};
+
+pub use rusb;
 
 mod error;
 
 /// Text justification
 #[repr(u8)]
+#[derive(Debug)]
 pub enum Justification {
     Left = 0x00,
     Center = 0x01,
@@ -17,6 +20,7 @@ pub enum Justification {
 
 /// The type of paper to print to
 #[repr(u8)]
+#[derive(Debug)]
 pub enum PaperType {
     Roll = 0b0011,
     Slip = 0b0100,
@@ -25,11 +29,13 @@ pub enum PaperType {
 
 /// The side of the slip paper to print to
 #[repr(u8)]
+#[derive(Debug)]
 pub enum SlipSide {
     Face = 0x04,
     Back = 0x44,
 }
 
+#[derive(Debug)]
 pub struct PrinterBuilder {
     vendor_id: u16,
     product_id: u16,
@@ -43,6 +49,7 @@ impl PrinterBuilder {
     }
 
     /// Finalize the builder and connect to the printer at the given path
+    #[instrument(skip(context))]
     pub fn connect(self, context: &Context) -> Result<Option<Printer>, ConnectionError> {
         let devices = context.devices()?;
 
@@ -117,6 +124,9 @@ impl Printer {
     const ESC: u8 = 0x1B;
     const GS: u8 = 0x1D;
     const FS: u8 = 0x1C;
+    const FF: u8 = 0x0C;
+
+    // TODO: 2 column
 
     /// Write raw bytes to the printer
     fn raw<D: AsRef<[u8]>>(&self, data: D) -> Result<(), PrinterError> {
@@ -143,6 +153,15 @@ impl Printer {
         self.raw([b'\n'])?;
 
         Ok(())
+    }
+
+    // Form Feed (in standard mode)
+    //
+    // Print and eject cut sheet (in standard mode)
+    //
+    // ASCII: FF
+    pub fn form_feed(&self) -> Result<(), PrinterError> {
+        self.raw([Self::FF])
     }
 
     /// Initialize printer

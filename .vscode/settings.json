@@ -1,5 +1,6 @@
 {
     "cSpell.words": [
+        "libusb",
         "rusb",
         "thiserror"
     ]
