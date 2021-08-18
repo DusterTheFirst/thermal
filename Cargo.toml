@@ -10,7 +10,7 @@ thermal = { path = "lib" }
 tracing = "0.1.26"
 tracing-subscriber = "0.2.19"
 color-eyre = "0.5.11"
-serenity = { version = "0.10.8", features = [
+serenity = { version = "0.10.9", features = [
     "unstable_discord_api",
     "builder",
     "cache",
@@ -20,6 +20,6 @@ serenity = { version = "0.10.8", features = [
     "model",
     "rustls_backend",
     "utils",
-], default-features = false, git = "https://github.com/serenity-rs/serenity/", rev = "dbf4d685a94f6b7f6f4a2f7f21e12c4e1425c231" }
+], default-features = false }
 tokio = { version = "1.10.0", features = ["full"] }
 ctrlc = { version = "3.2.0", features = ["termination"] }

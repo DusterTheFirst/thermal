@@ -123,21 +123,37 @@ impl EventHandler for Handler {
         info!(user = ?ready.user.tag(), "Connected");
 
         let commands = ApplicationCommand::set_global_application_commands(&ctx, |commands| {
-            commands.create_application_command(|command| {
-                command
-                    .name("print")
-                    .description("Send a print command to the thermal printer")
-                    .create_option(|option| {
-                        option
-                            .name("paper_type")
-                            .description("The type of paper to print on")
-                            .kind(ApplicationCommandOptionType::String)
-                            .required(true)
-                            .add_string_choice("roll", "roll")
-                            .add_string_choice("slip", "slip")
-                            .add_string_choice("slip back", "slip_back")
-                    })
-            })
+            commands
+                .create_application_command(|command| {
+                    command
+                        .name("start-print")
+                        .description("Create a print command to send to the thermal printer")
+                })
+                .create_application_command(|command| {
+                    command
+                        .name("justify")
+                        .description("Set the justification for the print")
+                })
+                .create_application_command(|command| {
+                    command
+                        .name("paper-type")
+                        .description("Select the paper type to print on")
+                        .create_option(|option| {
+                            option
+                                .name("type")
+                                .description("The type of paper to print on")
+                                .kind(ApplicationCommandOptionType::String)
+                                .required(true)
+                                .add_string_choice("roll", "roll")
+                                .add_string_choice("slip", "slip")
+                                .add_string_choice("slip back", "slip_back")
+                        })
+                })
+                .create_application_command(|command| {
+                    command
+                        .name("finish-print")
+                        .description("Finish and send print to the thermal printer")
+                })
         })
         .await;
 
